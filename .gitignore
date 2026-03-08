@@ -1,0 +1,24 @@
+# dependencies
+node_modules
+.pnp
+.pnp.js
+
+# env
+.env
+.env.local
+.env*.local
+
+# next
+.next/
+out/
+
+# misc
+.DS_Store
+*password*
+*credentials*
+*.pem
+debug.log
+npm-debug.log*
+
+# typescript
+next-env.d.ts
