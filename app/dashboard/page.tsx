@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { logAuthEvent } from "@/lib/authLog";
 import { useSessionTimeout } from "@/lib/useSessionTimeout";
+import {
+  formatRemainingAccess,
+  getRemainingHours,
+} from "@/lib/formatRemainingAccess";
 
 type Profile = {
   id: string;
@@ -22,6 +26,19 @@ type Membership = {
 const SESSION_TIMEOUT_MINUTES = typeof process.env.NEXT_PUBLIC_SESSION_TIMEOUT_MINUTES !== "undefined"
   ? Number(process.env.NEXT_PUBLIC_SESSION_TIMEOUT_MINUTES) || 30
   : 30;
+
+const GRACE_PERIOD_HOURS = 24;
+const RENEWAL_WARNING_HOURS = 3 * 24; // 3 days
+
+function planDisplayName(plan: string): string {
+  const names: Record<string, string> = {
+    free: "Free Trial",
+    monthly: "Monthly Access",
+    advisor: "Advisor Package",
+    enterprise: "Enterprise",
+  };
+  return names[plan] ?? plan.replace(/_/g, " ");
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -66,8 +83,16 @@ export default function DashboardPage() {
       const now = new Date();
       const isActive =
         mem?.status === "active" && mem?.expires_at && new Date(mem.expires_at) > now;
+
       if (!isActive) {
-        router.replace("/pricing");
+        const expiredAt = mem?.expires_at ? new Date(mem.expires_at).getTime() : 0;
+        const hoursSinceExpiry = expiredAt
+          ? (now.getTime() - expiredAt) / (1000 * 60 * 60)
+          : 999;
+        const withinGracePeriod = hoursSinceExpiry >= 0 && hoursSinceExpiry <= GRACE_PERIOD_HOURS;
+        router.replace(
+          withinGracePeriod ? "/pricing?message=recently_expired" : "/pricing"
+        );
         return;
       }
       setMembership(mem ?? null);
@@ -105,12 +130,57 @@ export default function DashboardPage() {
     );
   }
 
+  const remainingHours = membership
+    ? getRemainingHours(membership.expires_at)
+    : 0;
+  const showRenewalWarning = remainingHours > 0 && remainingHours < RENEWAL_WARNING_HOURS;
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4">
-      <div className="cb-card">
+      <div className="cb-card max-w-lg">
         <h1 className="cb-card-title">Capital Bridge Advisory Platform</h1>
         <p className="cb-card-subtitle">Your Account</p>
-        <div className="mt-8 space-y-3 rounded-xl border border-cb-green/10 bg-white/60 px-4 py-4 text-sm text-cb-green">
+
+        {/* Subscription Status Panel */}
+        {membership && (
+          <div className="mt-6 rounded-xl border border-cb-green/20 bg-cb-green/5 px-4 py-4">
+            <h3 className="font-serif text-sm font-semibold text-cb-green">
+              Subscription Status
+            </h3>
+            <dl className="mt-3 space-y-2 text-sm text-cb-green">
+              <div className="flex justify-between">
+                <dt className="text-cb-green/80">Current Plan</dt>
+                <dd className="font-medium">{planDisplayName(membership.plan)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-cb-green/80">Membership Status</dt>
+                <dd className="font-medium capitalize">{membership.status}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-cb-green/80">Expiry Date</dt>
+                <dd>
+                  {new Date(membership.expires_at).toLocaleDateString(undefined, {
+                    dateStyle: "medium",
+                  })}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-cb-green/80">Access Remaining</dt>
+                <dd className="font-medium">
+                  {formatRemainingAccess(membership.expires_at)}
+                </dd>
+              </div>
+            </dl>
+            {showRenewalWarning && (
+              <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm text-amber-900">
+                Your access expires soon. Renew now to continue using the Capital Bridge
+                advisory platform without interruption.
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="mt-6 space-y-3 rounded-xl border border-cb-green/10 bg-white/60 px-4 py-4 text-sm text-cb-green">
           <p>
             <span className="font-medium text-cb-green/80">Username:</span>{" "}
             {profile.username ?? "—"}
@@ -119,13 +189,6 @@ export default function DashboardPage() {
             <span className="font-medium text-cb-green/80">Email:</span>{" "}
             {profile.email ?? "—"}
           </p>
-          {membership && (
-            <p>
-              <span className="font-medium text-cb-green/80">Plan:</span>{" "}
-              {membership.plan.replace(/_/g, " ")} · Expires{" "}
-              {new Date(membership.expires_at).toLocaleDateString()}
-            </p>
-          )}
         </div>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
           <button type="button" onClick={handleLogout} className="cb-btn-primary">
