@@ -13,6 +13,12 @@ type Profile = {
   email: string | null;
 };
 
+type Membership = {
+  status: string;
+  expires_at: string;
+  plan: string;
+};
+
 const SESSION_TIMEOUT_MINUTES = typeof process.env.NEXT_PUBLIC_SESSION_TIMEOUT_MINUTES !== "undefined"
   ? Number(process.env.NEXT_PUBLIC_SESSION_TIMEOUT_MINUTES) || 30
   : 30;
@@ -20,6 +26,7 @@ const SESSION_TIMEOUT_MINUTES = typeof process.env.NEXT_PUBLIC_SESSION_TIMEOUT_M
 export default function DashboardPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [membership, setMembership] = useState<Membership | null>(null);
   const [loading, setLoading] = useState(true);
 
   useSessionTimeout(SESSION_TIMEOUT_MINUTES);
@@ -33,21 +40,37 @@ export default function DashboardPage() {
         router.replace("/login");
         return;
       }
-      const { data, error } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("id, username, email")
         .eq("id", session.user.id)
         .maybeSingle();
-      if (error) {
-        console.error("Profile fetch error:", error);
+      if (profileError) {
+        console.error("Profile fetch error:", profileError);
       }
       setProfile(
-        data ?? {
+        profileData ?? {
           id: session.user.id,
           username: session.user.user_metadata?.username ?? null,
           email: session.user.email ?? null,
         }
       );
+
+      const { data: membershipData } = await supabase
+        .from("memberships")
+        .select("status, expires_at, plan")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      const mem = membershipData as Membership | null;
+      const now = new Date();
+      const isActive =
+        mem?.status === "active" && mem?.expires_at && new Date(mem.expires_at) > now;
+      if (!isActive) {
+        router.replace("/pricing");
+        return;
+      }
+      setMembership(mem ?? null);
       setLoading(false);
     }
     load();
@@ -96,11 +119,21 @@ export default function DashboardPage() {
             <span className="font-medium text-cb-green/80">Email:</span>{" "}
             {profile.email ?? "—"}
           </p>
+          {membership && (
+            <p>
+              <span className="font-medium text-cb-green/80">Plan:</span>{" "}
+              {membership.plan.replace(/_/g, " ")} · Expires{" "}
+              {new Date(membership.expires_at).toLocaleDateString()}
+            </p>
+          )}
         </div>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
           <button type="button" onClick={handleLogout} className="cb-btn-primary">
             Log Out
           </button>
+          <Link href="/pricing" className="cb-link rounded-xl px-4 py-3 text-center">
+            View Plans
+          </Link>
           <Link href="/" className="cb-link rounded-xl px-4 py-3 text-center">
             Home
           </Link>
