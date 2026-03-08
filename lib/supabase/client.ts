@@ -5,6 +5,11 @@ const supabaseUrl =
 const supabaseAnonKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
 
+/** True when real Supabase env vars are set (not placeholder). */
+export const isSupabaseConfigured =
+  !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL !== "https://placeholder.supabase.co";
+
 /**
  * Browser Supabase client for Client Components.
  * Uses cookies for session storage (via @supabase/ssr) when used with middleware.

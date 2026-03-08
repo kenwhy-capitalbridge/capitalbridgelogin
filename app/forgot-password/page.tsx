@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { logAuthEvent } from "@/lib/authLog";
 
 export default function ForgotPasswordPage() {
@@ -25,7 +25,14 @@ export default function ForgotPasswordPage() {
     setLoading(false);
     if (error) {
       console.error("Supabase reset password error:", error);
-      setError(error.message);
+      const isNetworkOrConfig =
+        !isSupabaseConfigured ||
+        error.message?.toLowerCase().includes("fetch");
+      setError(
+        isNetworkOrConfig
+          ? "Cannot reach the authentication service. If you run this site, set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your deployment (e.g. Vercel) and redeploy."
+          : error.message
+      );
       return;
     }
     logAuthEvent("password_reset_request", { email: email?.slice(0, 3) + "***" });
