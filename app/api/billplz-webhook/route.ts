@@ -50,9 +50,8 @@ export async function POST(request: NextRequest) {
     }
 
     const config = PLAN_CONFIG[plan];
-    const amountCents = parseInt(params.paid_amount || params.amount || "0", 10) || config.amountCents;
+    const amountSen = parseInt(params.paid_amount || params.amount || "0", 10) || config.amountCents;
     const billId = params.id ?? "";
-    const transactionId = params.transaction_id ?? null;
     const paidAt = params.paid_at
       ? new Date(params.paid_at).toISOString()
       : new Date().toISOString();
@@ -61,6 +60,16 @@ export async function POST(request: NextRequest) {
     if (!supabase) {
       console.error("billplz-webhook: Supabase service role not configured");
       return NextResponse.json({ error: "Not configured" }, { status: 500 });
+    }
+
+    // Idempotency: skip if we already processed this bill
+    const { data: existingPayment } = await supabase
+      .from("payments")
+      .select("id")
+      .eq("billplz_bill_id", billId)
+      .maybeSingle();
+    if (existingPayment) {
+      return NextResponse.json({ ok: true, duplicate: true });
     }
 
     const { data: existing } = await supabase
@@ -98,15 +107,16 @@ export async function POST(request: NextRequest) {
 
     const { error: payErr } = await supabase.from("payments").insert({
       user_id: userId,
-      plan_name: plan,
-      amount_cents: amountCents,
+      plan: plan,
       billplz_bill_id: billId,
-      billplz_transaction_id: transactionId,
+      amount: amountSen,
+      payment_status: "completed",
       paid_at: paidAt,
     });
 
     if (payErr) {
       console.error("billplz-webhook: payment insert error", payErr);
+      return NextResponse.json({ error: "Payment record failed" }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true });

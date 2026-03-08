@@ -41,12 +41,14 @@ export async function POST(request: NextRequest) {
     }
 
     const config = PLAN_CONFIG[plan];
-    const origin =
+    const baseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
       request.nextUrl?.origin ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-    const callbackUrl = `${origin}/api/billplz-webhook`;
-    const redirectUrl = `${origin}/payment-success`;
+      "https://login.thecapitalbridge.com";
+    const base = baseUrl.replace(/\/$/, "");
+    const redirectUrl = `${base}/dashboard`;
+    const callbackUrl = `${base}/api/billplz-webhook`;
 
     const name =
       (user.user_metadata?.username as string) ||
@@ -61,7 +63,7 @@ export async function POST(request: NextRequest) {
       amount: String(config.amountCents),
       callback_url: callbackUrl,
       redirect_url: redirectUrl,
-      description: `Capital Bridge - ${plan} plan`,
+      description: "Capital Bridge Advisory Platform Subscription",
       reference_1_label: "User ID",
       reference_1: user.id,
       reference_2_label: "Plan",
