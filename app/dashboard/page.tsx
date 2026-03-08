@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { logAuthEvent } from "@/lib/authLog";
+import { useSessionTimeout } from "@/lib/useSessionTimeout";
 
 type Profile = {
   id: string;
@@ -11,10 +13,16 @@ type Profile = {
   email: string | null;
 };
 
+const SESSION_TIMEOUT_MINUTES = typeof process.env.NEXT_PUBLIC_SESSION_TIMEOUT_MINUTES !== "undefined"
+  ? Number(process.env.NEXT_PUBLIC_SESSION_TIMEOUT_MINUTES) || 30
+  : 30;
+
 export default function DashboardPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useSessionTimeout(SESSION_TIMEOUT_MINUTES);
 
   useEffect(() => {
     async function load() {
@@ -46,6 +54,7 @@ export default function DashboardPage() {
   }, [router]);
 
   async function handleLogout() {
+    logAuthEvent("logout");
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { logAuthEvent } from "@/lib/authLog";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -31,7 +32,13 @@ export default function SignupPage() {
     }
     setLoading(false);
     setSuccess(true);
+    logAuthEvent("signup_success");
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
     setTimeout(() => {
+      if (appUrl && typeof window !== "undefined") {
+        window.location.href = appUrl;
+        return;
+      }
       router.push("/dashboard");
       router.refresh();
     }, 2000);

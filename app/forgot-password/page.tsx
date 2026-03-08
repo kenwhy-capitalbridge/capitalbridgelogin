@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
+import { logAuthEvent } from "@/lib/authLog";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -27,6 +28,7 @@ export default function ForgotPasswordPage() {
       setError(error.message);
       return;
     }
+    logAuthEvent("password_reset_request", { email: email?.slice(0, 3) + "***" });
     setSent(true);
   }
 

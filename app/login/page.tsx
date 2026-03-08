@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { logAuthEvent } from "@/lib/authLog";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,6 +19,8 @@ export default function LoginPage() {
     const message = searchParams.get("message");
     if (message === "reset") {
       setSuccessMessage("Password reset successfully. Sign in with your new password.");
+    } else if (message === "session_expired") {
+      setSuccessMessage("Your session has expired. Please log in again.");
     }
   }, [searchParams]);
 
@@ -26,11 +29,19 @@ export default function LoginPage() {
     setError(null);
     setSuccessMessage(null);
     setLoading(true);
+    logAuthEvent("login_attempt", { email: email?.slice(0, 3) + "***" });
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
+      logAuthEvent("login_failure", { reason: error.message });
       console.error("Supabase login error:", error);
       setError(error.message);
+      return;
+    }
+    logAuthEvent("login_success");
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (appUrl && typeof window !== "undefined") {
+      window.location.href = appUrl;
       return;
     }
     router.push("/dashboard");

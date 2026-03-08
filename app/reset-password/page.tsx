@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { logAuthEvent } from "@/lib/authLog";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -62,6 +63,8 @@ export default function ResetPasswordPage() {
       setError(error.message);
       return;
     }
+    logAuthEvent("password_reset_success");
+    logAuthEvent("password_change");
     await supabase.auth.signOut();
     router.push("/login?message=reset");
     router.refresh();

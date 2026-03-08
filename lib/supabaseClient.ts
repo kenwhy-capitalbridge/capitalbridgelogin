@@ -1,8 +1,5 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
-
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+/**
+ * Browser Supabase client for auth. Uses @supabase/ssr for cookie-based sessions.
+ * Use this in Client Components. Middleware refreshes the session from cookies.
+ */
+export { supabase } from "@/lib/supabase/client";
