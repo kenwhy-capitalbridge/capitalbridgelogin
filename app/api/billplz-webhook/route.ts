@@ -105,6 +105,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Database error" }, { status: 500 });
     }
 
+    // Activate subscription record (created on signup with status = inactive)
+    const { error: subErr } = await supabase
+      .from("subscriptions")
+      .update({ status: "active" })
+      .eq("user_id", userId);
+
+    if (subErr) {
+      console.error("billplz-webhook: subscription update error", subErr);
+    }
+
     const { error: payErr } = await supabase.from("payments").insert({
       user_id: userId,
       plan: plan,

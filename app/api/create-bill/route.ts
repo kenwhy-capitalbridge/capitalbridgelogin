@@ -41,29 +41,31 @@ export async function POST(request: NextRequest) {
     }
 
     const config = PLAN_CONFIG[plan];
-    const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-      request.nextUrl?.origin ||
-      "https://login.thecapitalbridge.com";
-    const base = baseUrl.replace(/\/$/, "");
-    const redirectUrl = `${base}/dashboard`;
-    const callbackUrl = `${base}/api/billplz-webhook`;
+    // Billplz requires callback_url and redirect_url per bill (no global dashboard webhook).
+    // Callback: backend receives payment confirmation even if user closes the payment page.
+    const callbackUrl =
+      process.env.BILLPLZ_CALLBACK_URL ||
+      "https://api.thecapitalbridge.com/api/billplz-webhook";
+    const redirectUrl =
+      process.env.BILLPLZ_REDIRECT_URL ||
+      "https://platform.thecapitalbridge.com/dashboard";
 
+    // User metadata for Billplz: required so the webhook can match payment to the correct user/subscription
+    const email = user.email ?? "";
     const name =
-      (user.user_metadata?.username as string) ||
-      (user.user_metadata?.full_name as string) ||
-      user.email?.split("@")[0] ||
+      (user.user_metadata?.username as string)?.trim() ||
+      (user.user_metadata?.full_name as string)?.trim() ||
+      (email ? email.split("@")[0] : "") ||
       "Customer";
 
     const form = new URLSearchParams({
       collection_id: collectionId,
-      email: user.email,
+      email,
       name: name.slice(0, 255),
       amount: String(config.amountCents),
       callback_url: callbackUrl,
       redirect_url: redirectUrl,
-      description: "Capital Bridge Advisory Platform Subscription",
+      description: "Capital Bridge Advisory Platform Access",
       reference_1_label: "User ID",
       reference_1: user.id,
       reference_2_label: "Plan",

@@ -33,13 +33,8 @@ export default function SignupPage() {
     setLoading(false);
     setSuccess(true);
     logAuthEvent("signup_success");
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
     setTimeout(() => {
-      if (appUrl && typeof window !== "undefined") {
-        window.location.href = appUrl;
-        return;
-      }
-      router.push("/dashboard");
+      router.push("/select-plan");
       router.refresh();
     }, 2000);
   }
@@ -52,7 +47,7 @@ export default function SignupPage() {
         <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
           {success && (
             <p className="cb-message-success">
-              Account created successfully. Redirecting to your dashboard…
+              Account created successfully. Redirecting to plan selection…
             </p>
           )}
           {error && <p className="cb-message-error">{error}</p>}
