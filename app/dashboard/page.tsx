@@ -32,7 +32,8 @@ const RENEWAL_WARNING_HOURS = 3 * 24; // 3 days
 
 function planDisplayName(plan: string): string {
   const names: Record<string, string> = {
-    free: "Free Trial",
+    trial: "Trial (7 days)",
+    free_trial: "Trial (7 days)",
     monthly: "Monthly Access",
     advisor: "Advisor Package",
     enterprise: "Enterprise",

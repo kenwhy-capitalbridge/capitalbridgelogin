@@ -33,9 +33,10 @@ export function verifyBillplzSignature(
 }
 
 export const PLAN_CONFIG = {
-  monthly: { amountCents: 20000, days: 30 },   // RM200
-  advisor: { amountCents: 50000, days: 90 },  // RM500
-  enterprise: { amountCents: 180000, days: 365 }, // RM1800
+  trial: { amountCents: 100, days: 7 },         // RM 1
+  monthly: { amountCents: 20000, days: 30 },    // RM 200
+  advisor: { amountCents: 54000, days: 90 },    // RM 540
+  enterprise: { amountCents: 240000, days: 365 }, // RM 2,400
 } as const;
 
 export type BillplzPlanId = keyof typeof PLAN_CONFIG;

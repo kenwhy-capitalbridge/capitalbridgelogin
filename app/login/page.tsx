@@ -40,7 +40,7 @@ export default function LoginPage() {
     }
     logAuthEvent("login_success");
     const redirect = searchParams.get("redirect");
-    const allowed = ["/select-plan", "/advisory-platform", "/dashboard", "/pricing"];
+    const allowed = ["/advisory-platform", "/dashboard", "/pricing"];
     if (redirect && allowed.includes(redirect)) {
       router.push(redirect);
       router.refresh();
@@ -100,7 +100,7 @@ export default function LoginPage() {
           </button>
         </form>
         <p className="mt-6 text-center text-sm text-cb-green/80">
-          Don&apos;t have an account? <Link href="/signup" className="cb-link">Sign Up</Link>
+          Don&apos;t have an account? <Link href="/pricing" className="cb-link">Sign Up</Link>
         </p>
       </div>
     </main>

@@ -12,7 +12,7 @@ export default function Home() {
           <Link href="/login" className="cb-btn-primary text-center">
             Log In
           </Link>
-          <Link href="/signup" className="cb-link rounded-xl px-5 py-3 text-center">
+          <Link href="/pricing" className="cb-link rounded-xl px-5 py-3 text-center">
             Sign Up
           </Link>
         </div>

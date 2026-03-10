@@ -10,7 +10,7 @@ function getServiceClient() {
   return createClient(url, key);
 }
 
-const VALID_PLANS: BillplzPlanId[] = ["monthly", "advisor", "enterprise"];
+const VALID_PLANS: BillplzPlanId[] = ["trial", "monthly", "advisor", "enterprise"];
 
 export async function POST(request: NextRequest) {
   try {
@@ -127,6 +127,17 @@ export async function POST(request: NextRequest) {
     if (payErr) {
       console.error("billplz-webhook: payment insert error", payErr);
       return NextResponse.json({ error: "Payment record failed" }, { status: 500 });
+    }
+
+    // Mark trial as used so user cannot purchase RM1 trial again
+    if (plan === "trial") {
+      const { error: profileErr } = await supabase
+        .from("profiles")
+        .update({ free_trial_used: true })
+        .eq("id", userId);
+      if (profileErr) {
+        console.error("billplz-webhook: profile free_trial_used update error", profileErr);
+      }
     }
 
     return NextResponse.json({ ok: true });

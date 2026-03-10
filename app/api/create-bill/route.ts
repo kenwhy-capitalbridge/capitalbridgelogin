@@ -7,7 +7,7 @@ const BILLPLZ_API_URL =
     ? "https://www.billplz-sandbox.com/api/v3/bills"
     : "https://www.billplz.com/api/v3/bills";
 
-const VALID_PLANS: BillplzPlanId[] = ["monthly", "advisor", "enterprise"];
+const VALID_PLANS: BillplzPlanId[] = ["trial", "monthly", "advisor", "enterprise"];
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,9 +26,24 @@ export async function POST(request: NextRequest) {
     const plan = (body?.plan ?? "").toLowerCase().trim() as BillplzPlanId;
     if (!VALID_PLANS.includes(plan)) {
       return NextResponse.json(
-        { error: "Invalid plan. Use monthly, advisor, or enterprise." },
+        { error: "Invalid plan. Use trial, monthly, advisor, or enterprise." },
         { status: 400 }
       );
+    }
+
+    // RM1 trial: one per user (by email / account)
+    if (plan === "trial") {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("free_trial_used")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profile?.free_trial_used) {
+        return NextResponse.json(
+          { error: "You have already used your RM 1 trial. Please choose another plan." },
+          { status: 400 }
+        );
+      }
     }
 
     const apiKey = process.env.BILLPLZ_API_KEY;

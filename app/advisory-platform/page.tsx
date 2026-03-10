@@ -42,7 +42,7 @@ export default function AdvisoryPlatformPage() {
 
   useEffect(() => {
     if (status === "no_subscription") {
-      router.replace("/select-plan");
+      router.replace("/pricing");
     }
   }, [status, router]);
 
@@ -65,16 +65,16 @@ export default function AdvisoryPlatformPage() {
             Advisory Platform
           </h1>
           <p className="mt-2 text-cb-cream/80">
-            Preview: Capital Stress Model and income sustainability tools.
+            Preview: Income Assessment and capital engineering tools.
           </p>
           <div className="mt-8 rounded-xl border border-cb-cream/20 bg-cb-cream/10 p-6">
             <h2 className="font-serif text-lg font-semibold text-cb-gold">
-              Capital Stress Model
+              Income Assessment
             </h2>
             <p className="mt-2 text-sm text-cb-cream/80">
-              Simulate how long assets can survive under different withdrawal
-              scenarios. Unlock the full platform to run your own scenarios and
-              generate advisory reports.
+              Evaluates whether your income structure can remain sustainable
+              indefinitely without eroding capital. Unlock the full platform to
+              run your own scenarios and stress-test resilience.
             </p>
           </div>
           <div className="mt-6 rounded-xl border border-cb-cream/20 bg-cb-cream/10 p-6">
@@ -86,16 +86,16 @@ export default function AdvisoryPlatformPage() {
             </p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-4">
               <Link
-                href="/login?redirect=/select-plan"
+                href="/login?redirect=/pricing"
                 className="cb-btn-primary inline-block text-center"
               >
-                Start Free Trial
+                Start RM 1 Trial
               </Link>
               <Link
-                href="/login?redirect=/select-plan"
+                href="/login?redirect=/pricing"
                 className="cb-link rounded-xl border border-cb-gold/50 bg-cb-gold/10 px-4 py-3 text-center"
               >
-                Subscribe RM200 per month
+                Subscribe RM 200 per month
               </Link>
             </div>
           </div>
@@ -115,7 +115,7 @@ export default function AdvisoryPlatformPage() {
           Advisory Platform
         </h1>
         <p className="mt-2 text-cb-cream/80">
-          Capital Stress Model, Forever Income Model, and advisory report tools.
+          Income Assessment, Capital Engineering, and Stress Test Resilience tools.
         </p>
         <div className="mt-8 rounded-xl border border-cb-cream/20 bg-cb-cream/10 p-6">
           <p className="text-cb-cream/90">
@@ -127,7 +127,7 @@ export default function AdvisoryPlatformPage() {
             <Link href="/dashboard" className="cb-link rounded-xl px-4 py-2">
               Dashboard
             </Link>
-            <Link href="/select-plan" className="cb-link rounded-xl px-4 py-2">
+            <Link href="/pricing" className="cb-link rounded-xl px-4 py-2">
               Manage plan
             </Link>
           </div>
