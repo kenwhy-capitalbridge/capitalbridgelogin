@@ -74,29 +74,17 @@ export default function DashboardPage() {
         }
       );
 
-      const { data: membershipData } = await supabase
-        .from("memberships")
-        .select("status, expires_at, plan")
+      const { data: activeMembership, error: membershipError } = await supabase
+        .from("active_memberships")
+        .select("user_id, status, expires_at, plan")
         .eq("user_id", session.user.id)
         .maybeSingle();
 
-      const mem = membershipData as Membership | null;
-      const now = new Date();
-      const isActive =
-        mem?.status === "active" && mem?.expires_at && new Date(mem.expires_at) > now;
-
-      if (!isActive) {
-        const expiredAt = mem?.expires_at ? new Date(mem.expires_at).getTime() : 0;
-        const hoursSinceExpiry = expiredAt
-          ? (now.getTime() - expiredAt) / (1000 * 60 * 60)
-          : 999;
-        const withinGracePeriod = hoursSinceExpiry >= 0 && hoursSinceExpiry <= GRACE_PERIOD_HOURS;
-        router.replace(
-          withinGracePeriod ? "/pricing?message=recently_expired" : "/pricing"
-        );
+      if (membershipError || !activeMembership) {
+        router.replace("/pricing");
         return;
       }
-      setMembership(mem ?? null);
+      setMembership(activeMembership as Membership);
       setLoading(false);
     }
     load();

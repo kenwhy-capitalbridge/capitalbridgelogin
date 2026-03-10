@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { verifyBillplzSignature, PLAN_CONFIG, type BillplzPlanId } from "@/lib/billplz";
+import { verifyBillplzSignature } from "@/lib/billplz";
 
 // Webhook must write to memberships and payments; use service role to bypass RLS.
 function getServiceClient() {
@@ -9,8 +9,6 @@ function getServiceClient() {
   if (!url || !key) return null;
   return createClient(url, key);
 }
-
-const VALID_PLANS: BillplzPlanId[] = ["trial", "monthly", "advisor", "enterprise"];
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,23 +36,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    const paid = params.paid === "true" && params.state === "paid";
-    if (!paid) {
-      return NextResponse.json({ received: true });
-    }
-
-    const userId = params.reference_1?.trim();
-    const plan = (params.reference_2?.trim() ?? "").toLowerCase() as BillplzPlanId;
-    if (!userId || !VALID_PLANS.includes(plan)) {
-      return NextResponse.json({ error: "Missing or invalid reference" }, { status: 400 });
-    }
-
-    const config = PLAN_CONFIG[plan];
-    const amountSen = parseInt(params.paid_amount || params.amount || "0", 10) || config.amountCents;
     const billId = params.id ?? "";
-    const paidAt = params.paid_at
-      ? new Date(params.paid_at).toISOString()
-      : new Date().toISOString();
+    const paid = params.paid === "true" && params.state === "paid";
 
     const supabase = getServiceClient();
     if (!supabase) {
@@ -62,85 +45,122 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not configured" }, { status: 500 });
     }
 
-    // Idempotency: skip if we already processed this bill
-    const { data: existingPayment } = await supabase
+    // 1) Lookup payment by bill id
+    const { data: payment, error: paymentError } = await supabase
       .from("payments")
-      .select("id")
+      .select("id, user_id, membership_id, status")
       .eq("billplz_bill_id", billId)
       .maybeSingle();
-    if (existingPayment) {
+
+    if (paymentError || !payment) {
+      console.error("billplz-webhook: payment not found for bill", billId, paymentError);
+      return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+    }
+
+    // Idempotency
+    if (payment.status === "paid") {
       return NextResponse.json({ ok: true, duplicate: true });
     }
 
-    const { data: existing } = await supabase
+    if (!paid) {
+      // Mark as failed; membership remains pending
+      await supabase
+        .from("payments")
+        .update({ status: "failed" })
+        .eq("id", payment.id);
+      return NextResponse.json({ ok: true, paid: false });
+    }
+
+    const paidAt = params.paid_at
+      ? new Date(params.paid_at).toISOString()
+      : new Date().toISOString();
+    const amount = (parseInt(params.paid_amount || params.amount || "0", 10) ||
+      0) / 100;
+
+    // 2) Mark payment as paid
+    const { error: payUpdateError } = await supabase
+      .from("payments")
+      .update({ status: "paid", paid_at: paidAt, amount })
+      .eq("id", payment.id);
+
+    if (payUpdateError) {
+      console.error("billplz-webhook: payment update failed", payUpdateError);
+      return NextResponse.json(
+        { error: "Payment update failed" },
+        { status: 500 }
+      );
+    }
+
+    // 3) Activate membership based on plan duration
+    const { data: membership, error: memError } = await supabase
       .from("memberships")
-      .select("expires_at")
-      .eq("user_id", userId)
+      .select("id, user_id, plan_id, status")
+      .eq("id", payment.membership_id)
       .maybeSingle();
 
-    let newExpiry: Date;
-    const now = new Date();
-    if (existing?.expires_at) {
-      const expiry = new Date(existing.expires_at);
-      newExpiry = expiry > now ? new Date(expiry) : new Date(now);
-    } else {
-      newExpiry = new Date(now);
-    }
-    newExpiry.setDate(newExpiry.getDate() + config.days);
-
-    const { error: updateErr } = await supabase
-      .from("memberships")
-      .upsert(
-        {
-          user_id: userId,
-          plan: plan,
-          status: "active",
-          expires_at: newExpiry.toISOString(),
-        },
-        { onConflict: "user_id" }
+    if (memError || !membership) {
+      console.error("billplz-webhook: membership not found", memError);
+      return NextResponse.json(
+        { error: "Membership not found" },
+        { status: 404 }
       );
-
-    if (updateErr) {
-      console.error("billplz-webhook: membership upsert error", updateErr);
-      return NextResponse.json({ error: "Database error" }, { status: 500 });
     }
 
-    // Activate subscription record (created on signup with status = inactive)
-    const { error: subErr } = await supabase
-      .from("subscriptions")
-      .update({ status: "active" })
-      .eq("user_id", userId);
+    const { data: plan, error: planError } = await supabase
+      .from("plans")
+      .select("id, duration_days")
+      .eq("id", membership.plan_id)
+      .maybeSingle();
 
-    if (subErr) {
-      console.error("billplz-webhook: subscription update error", subErr);
+    if (planError || !plan) {
+      console.error("billplz-webhook: plan not found", planError);
+      return NextResponse.json({ error: "Plan not found" }, { status: 404 });
     }
 
-    const { error: payErr } = await supabase.from("payments").insert({
-      user_id: userId,
-      plan: plan,
-      billplz_bill_id: billId,
-      amount: amountSen,
-      payment_status: "completed",
-      paid_at: paidAt,
-    });
+    const startDate = new Date();
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + plan.duration_days);
 
-    if (payErr) {
-      console.error("billplz-webhook: payment insert error", payErr);
-      return NextResponse.json({ error: "Payment record failed" }, { status: 500 });
+    const { error: membershipUpdateError } = await supabase
+      .from("memberships")
+      .update({
+        status: "active",
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+      })
+      .eq("id", membership.id);
+
+    if (membershipUpdateError) {
+      console.error("billplz-webhook: membership update failed", membershipUpdateError);
+      return NextResponse.json(
+        { error: "Membership update failed" },
+        { status: 500 }
+      );
     }
 
-    // Mark trial as used so user cannot purchase RM1 trial again
-    if (plan === "trial") {
-      const { error: profileErr } = await supabase
+    // 4) Increment trial_count if this is the trial plan
+    if (plan.id === "trial") {
+      const { data: profile, error: profError } = await supabase
         .from("profiles")
-        .update({ free_trial_used: true })
-        .eq("id", userId);
-      if (profileErr) {
-        console.error("billplz-webhook: profile free_trial_used update error", profileErr);
+        .select("trial_count")
+        .eq("id", membership.user_id)
+        .maybeSingle();
+
+      if (profError) {
+        console.error("billplz-webhook: profile fetch error", profError);
+      } else {
+        const current = profile?.trial_count ?? 0;
+        const { error: trialUpdateError } = await supabase
+          .from("profiles")
+          .update({ trial_count: current + 1 })
+          .eq("id", membership.user_id);
+        if (trialUpdateError) {
+          console.error("billplz-webhook: trial_count update error", trialUpdateError);
+        }
       }
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, paid: true });
   } catch (e) {
     console.error("billplz-webhook error:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

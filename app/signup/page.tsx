@@ -1,16 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+
+const VALID_PLANS = ["trial", "monthly", "advisor", "enterprise"] as const;
+type PlanId = (typeof VALID_PLANS)[number];
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const planParam = (searchParams.get("plan") ?? "").toLowerCase().trim();
+  const isValidPlan = VALID_PLANS.includes(planParam as PlanId);
+  const plan: PlanId | null = isValidPlan ? (planParam as PlanId) : null;
+
+  useEffect(() => {
+    if (!isValidPlan) {
+      router.replace("/pricing");
+    }
+  }, [isValidPlan, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,9 +32,17 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const { supabase } = await import("@/lib/supabase/client");
+      if (!plan) {
+        setError("Please select a plan from the pricing page.");
+        router.replace("/pricing");
+        return;
+      }
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: { selected_plan: plan },
+        },
       });
       if (signUpError) {
         setError(signUpError.message);
@@ -35,27 +57,11 @@ export default function SignupPage() {
         credentials: "same-origin",
       }).catch(() => {});
 
-      // Create RM 1 trial bill and redirect to Billplz. Account is already created above;
-      // when payment succeeds, the webhook activates membership.
-      try {
-        const res = await fetch("/api/create-bill", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan: "trial" }),
-        });
-        const data = await res.json();
-        if (res.ok && data?.url) {
-          window.location.href = data.url;
-          return;
-        }
-        setError(
-          data?.error ?? "Could not start RM 1 payment. Please try again."
-        );
-        return;
-      } catch {
-        setError("Could not start RM 1 payment. Please try again.");
-        return;
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+      if (typeof window !== "undefined") {
+        window.location.href = appUrl || "/dashboard";
       }
+      return;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -71,7 +77,7 @@ export default function SignupPage() {
         <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
           {success && (
             <p className="cb-message-success">
-              Account created. Redirecting to complete RM 1 payment…
+              Account created. Redirecting to confirm your plan…
             </p>
           )}
           {error && <p className="cb-message-error">{error}</p>}
@@ -105,7 +111,7 @@ export default function SignupPage() {
             />
           </div>
           <button type="submit" disabled={loading} className="cb-btn-primary mt-2">
-            {loading ? "Redirecting to payment…" : "Pay and Create Account"}
+            {loading ? "Creating account…" : "Create Account"}
           </button>
         </form>
         <p className="mt-6 text-center text-sm text-cb-green/80">

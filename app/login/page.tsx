@@ -39,19 +39,12 @@ export default function LoginPage() {
       return;
     }
     logAuthEvent("login_success");
-    const redirect = searchParams.get("redirect");
-    const allowed = ["/advisory-platform", "/dashboard", "/pricing"];
-    if (redirect && allowed.includes(redirect)) {
-      router.push(redirect);
-      router.refresh();
-      return;
-    }
+
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    if (appUrl && typeof window !== "undefined") {
-      window.location.href = appUrl;
+    if (typeof window !== "undefined") {
+      window.location.href = appUrl || "/dashboard";
       return;
     }
-    window.location.href = "https://thecapitalbridge.com/advisory-platform/";
   }
 
   return (

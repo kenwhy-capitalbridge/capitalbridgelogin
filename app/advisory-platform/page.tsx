@@ -5,8 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-type Membership = { status: string; expires_at: string; plan: string };
-
 export default function AdvisoryPlatformPage() {
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "preview" | "authenticated" | "no_subscription">("loading");
@@ -19,20 +17,13 @@ export default function AdvisoryPlatformPage() {
         return;
       }
 
-      const { data: membership } = await supabase
-        .from("memberships")
-        .select("status, expires_at, plan")
+      const { data: activeRow, error: membershipError } = await supabase
+        .from("active_memberships")
+        .select("user_id")
         .eq("user_id", session.user.id)
         .maybeSingle();
 
-      const mem = membership as Membership | null;
-      const now = new Date();
-      const isActive =
-        mem?.status === "active" &&
-        mem?.expires_at &&
-        new Date(mem.expires_at) > now;
-
-      if (!isActive) {
+      if (membershipError || !activeRow) {
         setStatus("no_subscription");
         return;
       }

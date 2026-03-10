@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -64,6 +64,7 @@ const INDIVIDUAL_PLANS = [
     name: "Trial Access (7 days)",
     price: 1,
     durationLabel: "7 Day Access",
+    supportingLine: "One-time introductory trial",
     description:
       "Try the advisory dashboard and models before committing.",
     includes: [
@@ -82,7 +83,7 @@ const INDIVIDUAL_PLANS = [
       "Save report on server",
     ],
     cta: "Start RM 1 Trial",
-    ctaLink: "/signup",
+    ctaLink: "/signup?plan=trial",
     paid: false,
     recommended: false,
   },
@@ -144,11 +145,11 @@ const ADVISOR_PLANS = [
   {
     id: "yearly_full",
     name: "Strategic Advisory & Execution",
-    price: 2400,
-    durationLabel: "365 Day Strategic Access",
+    price: 2500,
+    durationLabel: "365-Day Strategic Advisory Access",
     description:
       "Full-year strategic advisory access for entrepreneurs, investors, and families structuring sustainable lifetime income portfolios.",
-    identityLine: "For long-term capital structuring and income strategy.",
+    identityLine: "Similar services typically cost RM15,000–RM60,000+ per year and usually require at least USD1 million to get started.",
     includes: [
       "Full advisory dashboard",
       "Forever Income Model",
@@ -161,8 +162,8 @@ const ADVISOR_PLANS = [
       "The Lion’s Verdict",
       "Save reports on server",
       "STRATEGIC ADVANTAGES",
-      "Enjoy partner financing and leverage opportunities",
-      "Access curated investment opportunities",
+      "Access Partner Financing & Strategic Leverage Solutions & Rates",
+      "Access Curated Private & Strategic Investment Opportunities",
       "Structured monthly income distribution & execution",
     ],
     excludes: [],
@@ -170,11 +171,12 @@ const ADVISOR_PLANS = [
     plan: "enterprise",
     paid: true,
     recommended: false,
-    badgeLabel: "Strategic Tier",
+    badgeLabel: "Flagship Access & Execution",
+    glow: true,
     includesNoCheck: ["STRATEGIC ADVANTAGES"],
     includesPlusIcon: [
-      "Enjoy partner financing and leverage opportunities",
-      "Access curated investment opportunities",
+      "Access Partner Financing & Strategic Leverage Solutions & Rates",
+      "Access Curated Private & Strategic Investment Opportunities",
       "Structured monthly income distribution & execution",
     ],
   },
@@ -184,24 +186,33 @@ function PlanCard({
   plan,
   onPay,
   loadingPlan,
+  isLoggedIn,
 }: {
   plan: (typeof INDIVIDUAL_PLANS)[0] | (typeof ADVISOR_PLANS)[0];
   onPay: (planId: string) => void;
   loadingPlan: string | null;
+  isLoggedIn: boolean;
 }) {
-  const planExt = plan as { badgeLabel?: string; supportingLine?: string; identityLine?: string; unavailableInIncludes?: string[]; includesNoCheck?: string[]; includesPlusIcon?: string[] };
+  const planExt = plan as { badgeLabel?: string; supportingLine?: string; identityLine?: string; unavailableInIncludes?: string[]; includesNoCheck?: string[]; includesPlusIcon?: string[]; glow?: boolean };
   const showBadge = plan.recommended || !!planExt.badgeLabel;
   const badgeText = planExt.badgeLabel ?? (plan.recommended ? "Recommended" : "");
-  return (
+  const useGlow = planExt.glow;
+  const cardInner = (
     <div
-      className={`relative flex flex-col rounded-2xl bg-cb-cream p-6 shadow-lg ${
+      className={`relative flex flex-col rounded-2xl bg-[#e5e4df] p-6 shadow-lg ${
         plan.recommended || !!planExt.badgeLabel
           ? "ring-2 ring-cb-gold ring-offset-2 ring-offset-[#0D3A1D]"
           : ""
       }`}
     >
       {showBadge && badgeText && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-cb-gold px-3 py-0.5 text-xs font-medium text-cb-green">
+        <div
+          className={`absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-cb-gold px-3 py-0.5 text-xs font-medium text-cb-green ${
+            badgeText === "Flagship Access & Execution"
+              ? "shadow-[0_0_12px_rgba(255,204,106,0.6),0_0_24px_rgba(255,204,106,0.3)]"
+              : ""
+          }`}
+        >
           {badgeText}
         </div>
       )}
@@ -211,7 +222,7 @@ function PlanCard({
       )}
       <div className="mt-2 flex items-baseline gap-1">
         <span className="font-serif text-3xl font-semibold text-cb-green">
-          RM {plan.price.toLocaleString()}
+          RM{plan.price.toLocaleString()}
         </span>
         {plan.price > 0 && (
           <span className="text-sm text-cb-green/70">{plan.durationLabel}</span>
@@ -232,17 +243,20 @@ function PlanCard({
             const plusIcon = planExt.includesPlusIcon?.includes(f);
             const microcopy = FEATURE_MICROCOPY[f];
             return (
-              <li key={f} className="flex flex-col gap-0.5">
+              <li
+                key={f}
+                className={`flex flex-col ${microcopy ? "gap-0" : "gap-0.5"} ${noCheck ? "!mt-5" : plusIcon ? "!mt-0.5" : ""}`}
+              >
                 <div className="flex items-center gap-2">
                   {!noCheck && (
                     <span className={
-                      plusIcon ? "text-xl font-bold text-cb-gold" :
-                      unavailable ? "text-red-500" : "text-cb-gold"
+                      plusIcon ? "text-xl font-bold text-[#c4a84a]" :
+                      unavailable ? "text-red-500" : "text-lg font-semibold text-[#c4a84a]"
                     }>{plusIcon ? "+" : unavailable ? "✕" : "✓"}</span>
                   )}
-                  <span className={unavailable ? "text-cb-green/70" : noCheck ? "font-semibold text-cb-green" : undefined}>{f}</span>
+                  <span className={`text-sm ${unavailable ? "text-cb-green/70" : noCheck ? "font-semibold text-cb-green" : "text-cb-green"}`}>{f}</span>
                 </div>
-                {microcopy && <p className="text-xs text-cb-green/70 pl-6">{microcopy}</p>}
+                {microcopy && <p className="mt-0 text-xs text-cb-green/70 pl-6 leading-snug">{microcopy}</p>}
               </li>
             );
           })}
@@ -252,12 +266,12 @@ function PlanCard({
             {plan.excludes.map((f) => {
               const microcopy = FEATURE_MICROCOPY[f];
               return (
-                <li key={f} className="flex flex-col gap-0.5">
+                <li key={f} className={`flex flex-col ${microcopy ? "gap-0" : "gap-0.5"}`}>
                   <div className="flex items-center gap-2">
                     <span className="text-red-500">✕</span>
                     {f}
                   </div>
-                  {microcopy && <p className="text-xs text-cb-green/70 pl-6">{microcopy}</p>}
+                  {microcopy && <p className="mt-0 text-xs text-cb-green/70 pl-6 leading-snug">{microcopy}</p>}
                 </li>
               );
             })}
@@ -270,20 +284,41 @@ function PlanCard({
             type="button"
             onClick={() => onPay(plan.plan!)}
             disabled={!!loadingPlan}
-            className="cb-btn-primary w-full disabled:opacity-60"
+            className="cb-btn-primary w-full shadow-[0_4px_8px_rgba(0,0,0,0.12)] disabled:opacity-60"
           >
             {loadingPlan === plan.plan ? "Redirecting…" : plan.cta}
           </button>
+        ) : isLoggedIn ? (
+          <button
+            type="button"
+            onClick={() => onPay("trial")}
+            disabled={!!loadingPlan}
+            className="cb-btn-primary w-full shadow-[0_4px_8px_rgba(0,0,0,0.12)] disabled:opacity-60"
+          >
+            {loadingPlan === "trial" ? "Redirecting…" : plan.cta}
+          </button>
         ) : (
           <Link
-            href={("ctaLink" in plan ? plan.ctaLink : null) ?? "/signup"}
-            className="cb-btn-primary block w-full text-center"
+            href={("ctaLink" in plan ? plan.ctaLink : null) ?? "/signup?plan=trial"}
+            className="cb-btn-primary block w-full text-center shadow-[0_4px_8px_rgba(0,0,0,0.12)]"
           >
             {plan.cta}
           </Link>
         )}
       </div>
     </div>
+  );
+  return useGlow ? (
+    <div
+      className="relative z-10 rounded-2xl"
+      style={{
+        boxShadow: "0 0 40px rgba(212,175,55,0.55), 0 0 80px rgba(212,175,55,0.3)",
+      }}
+    >
+      {cardInner}
+    </div>
+  ) : (
+    cardInner
   );
 }
 
@@ -292,33 +327,34 @@ function PricingContent() {
   const searchParams = useSearchParams();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const recentlyExpired = searchParams.get("message") === "recently_expired";
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setIsLoggedIn(!!session));
+  }, []);
 
   async function handlePay(planId: string) {
     if (!planId) return;
     setError(null);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      router.replace("/signup?redirect=/pricing");
+      router.replace(`/signup?plan=${encodeURIComponent(planId)}`);
       return;
     }
     setLoadingPlan(planId);
     try {
-      const res = await fetch("/api/create-bill", {
+      const setRes = await fetch("/api/set-pending-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan: planId }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data?.error ?? "Failed to create payment link.");
+      if (!setRes.ok) {
+        const data = await setRes.json().catch(() => ({}));
+        setError(data?.error ?? "Could not set plan.");
         return;
       }
-      if (data?.url) {
-        window.location.href = data.url;
-        return;
-      }
-      setError("Invalid response from server.");
+      router.replace(`/confirm-payment?plan=${encodeURIComponent(planId)}`);
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -327,29 +363,31 @@ function PricingContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0D3A1D] px-4 py-10 sm:py-14">
-      <div className="mx-auto max-w-5xl">
+    <main className="min-h-screen bg-[#0D3A1D]">
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
         {/* Value Anchor Section */}
         <section className="text-center">
-          <h1 className="font-serif text-3xl font-semibold text-cb-gold sm:text-4xl lg:text-5xl">
-            The Capital Bridge Advisory Framework
-          </h1>
-          <div className="mx-auto mt-4 max-w-2xl text-lg text-cb-cream/85">
-            <p className="font-semibold text-cb-cream">
-              A clear path to growing capital and building income that lasts for life
-            </p>
-            <p className="mt-2">
-              Capital Bridge helps you understand where you stand today, grow your
-              capital with intent, and turn it into sustainable income — using a simple,
-              step‑by‑step advisory framework.
-            </p>
+          <div className="-mx-2 sm:-mx-4 md:-mx-6 px-2 sm:px-4 md:px-6">
+            <h1 className="font-serif text-3xl font-semibold text-cb-gold sm:text-4xl lg:text-5xl">
+              The Capital Bridge Advisory Framework
+            </h1>
+            <div className="mx-auto mt-4 max-w-3xl text-lg text-cb-cream/85">
+              <p className="font-semibold text-cb-cream">
+                A Clear Path To Growing Capital And Building Income That Lasts A Lifetime
+              </p>
+              <p className="mt-2">
+                Capital Bridge helps you understand where you stand today, grow your
+                capital with intent, and turn it into sustainable income — using a simple,
+                step‑by‑step advisory framework.
+              </p>
+            </div>
           </div>
-          <div className="mt-10 grid grid-cols-1 items-center gap-6 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:gap-4">
-            <div className="rounded-xl border border-cb-cream/20 bg-cb-cream/5 px-6 py-5 text-left">
+          <div className="mt-10 grid grid-cols-1 items-stretch gap-6 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:gap-4">
+            <div className="flex h-full flex-col rounded-xl border border-cb-cream/20 bg-cb-cream/5 px-6 py-5 text-center">
               <h3 className="font-serif text-lg font-semibold text-cb-gold">
                 Income Assessment
               </h3>
-              <p className="mt-2 text-sm text-cb-cream/80">
+              <p className="mt-2 flex-1 text-sm text-cb-cream/80">
                 Evaluates whether your income structure can remain sustainable
                 indefinitely without eroding capital.
               </p>
@@ -378,11 +416,11 @@ function PricingContent() {
                 <path d="M2 12h20M14 4l8 8-8 8" />
               </svg>
             </div>
-            <div className="rounded-xl border border-cb-cream/20 bg-cb-cream/5 px-6 py-5 text-left">
+            <div className="flex h-full flex-col rounded-xl border border-cb-cream/20 bg-cb-cream/5 px-6 py-5 text-center">
               <h3 className="font-serif text-lg font-semibold text-cb-gold">
                 Capital Engineering
               </h3>
-              <p className="mt-2 text-sm text-cb-cream/80">
+              <p className="mt-2 flex-1 text-sm text-cb-cream/80">
                 Analyzes how capital sources, withdrawals, and investment growth
                 interact to support long-term income.
               </p>
@@ -411,11 +449,11 @@ function PricingContent() {
                 <path d="M2 12h20M14 4l8 8-8 8" />
               </svg>
             </div>
-            <div className="rounded-xl border border-cb-cream/20 bg-cb-cream/5 px-6 py-5 text-left">
+            <div className="flex h-full flex-col rounded-xl border border-cb-cream/20 bg-cb-cream/5 px-6 py-5 text-center">
               <h3 className="font-serif text-lg font-semibold text-cb-gold">
                 Stress Test Income & Capital Resilience
               </h3>
-              <p className="mt-2 text-sm text-cb-cream/80">
+              <p className="mt-2 flex-1 text-sm text-cb-cream/80">
                 Tests how your capital structure behaves under market stress,
                 volatility, or unexpected changes.
               </p>
@@ -425,13 +463,16 @@ function PricingContent() {
 
         {/* Outcome Preview Section — styled like THE LION'S VERDICT: dark green, gold accents */}
         <section className="mt-16 sm:mt-20">
-          <h2 className="font-serif text-2xl font-semibold text-cb-cream sm:text-3xl">
-            Capital Bridge Outcome Preview
-          </h2>
-          <p className="mt-2 text-cb-cream/80">
-            Preview the advisory insights generated by Capital Bridge before building
-            your own strategy.
-          </p>
+          <div className="text-center -mx-2 sm:-mx-4 md:-mx-6 px-2 sm:px-4 md:px-6">
+            <h2 className="font-serif text-2xl font-semibold text-cb-gold sm:text-3xl">
+              Capital Bridge Outcome Preview
+            </h2>
+            <p className="mx-auto mt-2 max-w-3xl text-cb-cream/80">
+              See how Capital Bridge analyzes income and investment strategies through
+              models carefully designed to be simple and easy to understand — not just
+              for financial planners, but for anyone making long-term decisions.
+            </p>
+          </div>
           <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {OUTCOME_PREVIEW_BOXES.map((box) => (
               <div
@@ -458,40 +499,43 @@ function PricingContent() {
               </div>
             ))}
           </div>
-          <p className="mt-4 text-xs text-cb-cream/60">
-            Full advisory interpretation is available with platform access.
+          <p className="mt-4 text-sm italic text-cb-cream/60">
+            *Full advisory interpretation is available with platform access.
           </p>
-          <div className="mt-8 rounded-xl border border-cb-gold/30 bg-cb-cream/5 p-5">
+          <div className="mt-8 rounded-xl border border-cb-gold/30 bg-cb-cream/5 p-5 text-center">
             <h3 className="font-serif text-lg font-semibold text-cb-cream">
-              Run Your Own Capital Structure Analysis
+              Try the Capital Bridge Framework
             </h3>
             <p className="mt-2 text-sm text-cb-cream/80">
-              See how long your capital can sustain withdrawals under different assumptions
-              and market conditions.
+              Understand how your capital structure performs under different withdrawal
+              strategies and market conditions.
             </p>
-            <p className="mt-2 text-xs text-cb-cream/70">
-              Most users discover important weaknesses in their capital structure within
-              their first analysis.
+            <p className="mt-2 text-sm text-cb-cream/70">
+              Many users uncover important risks in their first analysis — insights that
+              often go unnoticed until stress testing reveals them.
             </p>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-col items-center justify-center gap-1">
               <Link
-                href="/signup?trial=1"
+                href="/signup?plan=trial"
                 className="cb-btn-primary inline-block w-full text-center sm:w-auto"
               >
-                Run My Analysis for RM 1
+                Start My Trial Analysis
               </Link>
+              <span className="text-sm text-cb-cream/70">7-day Access • RM1 Verification</span>
             </div>
           </div>
         </section>
 
         {/* Trust Layer Section */}
         <section className="mt-16 sm:mt-20">
-          <h2 className="font-serif text-2xl font-semibold text-cb-gold sm:text-3xl">
-            A Proprietary Framework to Build Capital and Income for Life
-          </h2>
-          <p className="mt-3 max-w-2xl text-cb-cream/85">
-            Capital Bridge helps you grow capital faster, stress‑test every strategy with full transparency, and turn strong results into sustainable income you can rely on for the long term.
-          </p>
+          <div className="text-center -mx-2 sm:-mx-4 md:-mx-6 px-2 sm:px-4 md:px-6">
+            <h2 className="font-serif text-2xl font-semibold text-cb-gold sm:text-3xl">
+              A Proprietary Framework to Build Capital and Income for Life
+            </h2>
+            <p className="mx-auto mt-3 max-w-3xl text-cb-cream/85">
+              Capital Bridge helps you grow capital faster, stress‑test every strategy with full transparency, and turn strong results into sustainable income you can rely on for the long term.
+            </p>
+          </div>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <div className="flex gap-4 rounded-xl border border-cb-cream/20 bg-cb-cream/5 px-5 py-4">
               <span className="text-cb-gold" aria-hidden>◆</span>
@@ -538,18 +582,25 @@ function PricingContent() {
 
         {/* Pricing Section */}
         <section className="mt-16 sm:mt-20">
-          <h2 className="font-serif text-2xl font-semibold text-cb-gold sm:text-3xl">
-            Choose Your Plan
-          </h2>
-          <p className="mt-2 text-cb-cream/80">
-            Test the platform with a low-cost trial, keep flexible monthly access, or step
-            up to quarterly and strategic yearly tiers.
-          </p>
+          <div className="text-center -mx-2 sm:-mx-4 md:-mx-6 px-2 sm:px-4 md:px-6">
+            <h2 className="font-serif text-2xl font-semibold text-cb-gold sm:text-3xl">
+              Select An Advisory Methodology
+            </h2>
+            <p className="mx-auto mt-2 max-w-3xl text-cb-cream/80">
+              Test the platform with a low-cost trial, keep flexible monthly access, or step
+              up to quarterly and strategic yearly tiers.
+            </p>
+          </div>
 
           {recentlyExpired && (
             <div className="cb-message-error mt-6 max-w-2xl rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-amber-900">
               Your access has recently expired. Renew now to continue using the Capital
               Bridge advisory platform.
+            </div>
+          )}
+          {searchParams.get("message") === "payment_unsuccessful" && (
+            <div className="cb-message-error mx-auto mt-6 max-w-2xl rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-amber-900 text-center">
+              Payment was not completed. You can select a plan below to try again.
             </div>
           )}
           {error && (
@@ -579,6 +630,7 @@ function PricingContent() {
                   plan={plan}
                   onPay={handlePay}
                   loadingPlan={loadingPlan}
+                  isLoggedIn={isLoggedIn}
                 />
               ))}
             </div>
@@ -586,23 +638,22 @@ function PricingContent() {
         </section>
 
         {/* Trusted Framework Section (below pricing) */}
-        <section className="mt-10 sm:mt-12">
-          <h3 className="font-serif text-xl font-semibold text-cb-cream">
-            Trusted Financial Modelling Framework
-          </h3>
-          <div className="mt-3 space-y-1.5 text-sm text-cb-cream/80">
-            <p>
-              Structured advisory models used to evaluate income sustainability and capital
-              durability.
-            </p>
-            <p>
-              Designed for investors, professionals, and financial advisors making
-              long-term income decisions.
-            </p>
-            <p>
-              Transparent modelling logic so users understand how advisory conclusions are
-              generated.
-            </p>
+        <section className="mt-10 sm:mt-12 text-center">
+          <div className="-mx-2 sm:-mx-4 md:-mx-6 px-2 sm:px-4 md:px-6">
+            <h3 className="font-serif text-xl font-semibold text-cb-cream">
+              <span className="text-cb-gold">Not in moments of excess</span>, but in <span className="font-bold text-cb-gold">decades of precision</span> Financial Modelling Framework
+            </h3>
+            <div className="mx-auto mt-3 max-w-3xl space-y-1.5 text-sm text-cb-cream/80">
+              <p>
+                Structured advisory models used to evaluate income sustainability and capital
+                durability. Designed for people and families, professionals, and financial
+                advisors making long-term income decisions.
+              </p>
+              <p>
+                Transparent modelling logic so you understand how advisory conclusions are
+                generated.
+              </p>
+            </div>
           </div>
         </section>
 

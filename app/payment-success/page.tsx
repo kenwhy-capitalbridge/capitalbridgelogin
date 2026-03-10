@@ -17,10 +17,16 @@ function PaymentSuccessContent() {
   }, []);
 
   useEffect(() => {
-    if (mounted && paid) {
+    if (!mounted) return;
+    if (paid) {
       const t = setTimeout(() => {
-        router.replace("/advisory-platform");
-      }, 2500);
+        window.location.href = "https://platform.thecapitalbridge.com";
+      }, 2000);
+      return () => clearTimeout(t);
+    } else {
+      const t = setTimeout(() => {
+        router.replace("/pricing?message=payment_unsuccessful");
+      }, 2000);
       return () => clearTimeout(t);
     }
   }, [mounted, paid, router]);
@@ -49,25 +55,25 @@ function PaymentSuccessContent() {
               Redirecting you to the Advisory Platform…
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center sm:gap-4">
-              <Link href="/advisory-platform" className="cb-btn-primary inline-block text-center">
+              <a
+                href="https://platform.thecapitalbridge.com"
+                className="cb-btn-primary inline-block text-center"
+              >
                 Go To Advisory Platform
-              </Link>
-              <Link href="/dashboard" className="cb-link rounded-xl px-4 py-3 text-center">
-                Dashboard
-              </Link>
+              </a>
             </div>
           </>
         ) : (
           <>
-            <p className="mt-6 text-cb-green/80">
-              You have been redirected from the payment page.
+            <p className="cb-message-error mt-6">
+              Payment was not completed. You can try again or choose another plan.
+            </p>
+            <p className="mt-3 text-sm text-cb-green/80">
+              Redirecting you to the pricing page…
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center sm:gap-4">
-              <Link href="/dashboard" className="cb-btn-primary inline-block text-center">
-                Dashboard
-              </Link>
-              <Link href="/pricing" className="cb-link rounded-xl px-4 py-3 text-center">
-                View Plans
+              <Link href="/pricing" className="cb-btn-primary inline-block text-center">
+                View Plans &amp; Retry
               </Link>
             </div>
           </>

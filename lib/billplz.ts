@@ -36,7 +36,7 @@ export const PLAN_CONFIG = {
   trial: { amountCents: 100, days: 7 },         // RM 1
   monthly: { amountCents: 20000, days: 30 },    // RM 200
   advisor: { amountCents: 54000, days: 90 },    // RM 540
-  enterprise: { amountCents: 240000, days: 365 }, // RM 2,400
+  enterprise: { amountCents: 250000, days: 365 }, // RM 2,500
 } as const;
 
 export type BillplzPlanId = keyof typeof PLAN_CONFIG;
