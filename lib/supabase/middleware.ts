@@ -34,7 +34,11 @@ export async function updateSession(request: NextRequest) {
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value, options }) => {
           request.cookies.set(name, value);
-          response.cookies.set(name, value, options);
+          const mergedOptions =
+            process.env.NODE_ENV === "production"
+              ? { ...options, domain: ".thecapitalbridge.com", secure: true }
+              : options;
+          response.cookies.set(name, value, mergedOptions);
         });
       },
     },

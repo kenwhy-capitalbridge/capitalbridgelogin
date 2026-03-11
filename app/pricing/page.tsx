@@ -617,6 +617,7 @@ function PricingContent() {
                   plan={plan}
                   onPay={handlePay}
                   loadingPlan={loadingPlan}
+                  isLoggedIn={isLoggedIn}
                 />
               ))}
             </div>

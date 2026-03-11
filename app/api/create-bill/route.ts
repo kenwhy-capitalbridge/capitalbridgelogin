@@ -6,6 +6,25 @@ const BILLPLZ_API_URL =
     ? "https://www.billplz-sandbox.com/api/v3/bills"
     : "https://www.billplz.com/api/v3/bills";
 
+const allowedOrigin =
+  process.env.NODE_ENV === "production"
+    ? "https://advisoryplatform.thecapitalbridge.com"
+    : "http://localhost:3002"; // advisory app origin in dev
+
+const corsHeaders: Record<string, string> = {
+  "Access-Control-Allow-Origin": allowedOrigin,
+  "Access-Control-Allow-Credentials": "true",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -16,31 +35,36 @@ export async function POST(request: NextRequest) {
     if (!user?.id || !user?.email) {
       return NextResponse.json(
         { error: "Unauthorized. Please log in." },
-        { status: 401 }
+        { status: 401, headers: corsHeaders },
       );
     }
 
     const body = await request.json().catch(() => ({}));
-    const planId = String(body?.plan_id ?? body?.plan ?? "").toLowerCase().trim();
+    const planId = String(body?.plan_id ?? body?.plan ?? "")
+      .toLowerCase()
+      .trim();
     if (!planId) {
-      return NextResponse.json({ error: "Missing plan_id" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing plan_id" },
+        { status: 400, headers: corsHeaders },
+      );
     }
 
-    // 1) Look up plan definition from plans table
     const { data: plan, error: planError } = await supabase
       .from("plans")
-      .select("id, name, price, duration_days, billplz_collection_id, active")
+      .select(
+        "id, name, price, duration_days, billplz_collection_id, active",
+      )
       .eq("id", planId)
       .maybeSingle();
 
     if (planError || !plan || !plan.active) {
       return NextResponse.json(
         { error: "Invalid or inactive plan" },
-        { status: 400 }
+        { status: 400, headers: corsHeaders },
       );
     }
 
-    // 2) Trial limit enforcement using profiles.trial_count
     if (plan.id === "trial") {
       const { data: profile } = await supabase
         .from("profiles")
@@ -55,12 +79,11 @@ export async function POST(request: NextRequest) {
             error:
               "You have fully utilised your trial limit. Please choose a full access plan to continue.",
           },
-          { status: 400 }
+          { status: 400, headers: corsHeaders },
         );
       }
     }
 
-    // 3) Create or reuse pending membership for this user + plan
     const { data: existingMembership } = await supabase
       .from("memberships")
       .select("id, status")
@@ -90,19 +113,18 @@ export async function POST(request: NextRequest) {
         console.error("create-bill: membership insert error", membershipError);
         return NextResponse.json(
           { error: "Could not create membership" },
-          { status: 500 }
+          { status: 500, headers: corsHeaders },
         );
       }
 
       membershipId = newMembership.id;
     }
 
-    // 4) Prepare Billplz request
     const apiKey = process.env.BILLPLZ_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: "Payment gateway is not configured." },
-        { status: 500 }
+        { status: 500, headers: corsHeaders },
       );
     }
 
@@ -119,7 +141,7 @@ export async function POST(request: NextRequest) {
     if (!collectionId) {
       return NextResponse.json(
         { error: "Billplz collection not configured." },
-        { status: 500 }
+        { status: 500, headers: corsHeaders },
       );
     }
 
@@ -157,7 +179,7 @@ export async function POST(request: NextRequest) {
       console.error("Billplz create bill error:", res.status, err);
       return NextResponse.json(
         { error: "Failed to create payment link." },
-        { status: 502 }
+        { status: 502, headers: corsHeaders },
       );
     }
 
@@ -165,11 +187,10 @@ export async function POST(request: NextRequest) {
     if (!data?.url) {
       return NextResponse.json(
         { error: "Invalid response from payment gateway." },
-        { status: 502 }
+        { status: 502, headers: corsHeaders },
       );
     }
 
-    // 5) Insert or update pending payment row
     const { error: paymentError } = await supabase.from("payments").upsert(
       {
         user_id: user.id,
@@ -178,20 +199,22 @@ export async function POST(request: NextRequest) {
         amount: plan.price,
         status: "pending",
       },
-      { onConflict: "billplz_bill_id" }
+      { onConflict: "billplz_bill_id" },
     );
 
     if (paymentError) {
       console.error("create-bill: payment upsert error", paymentError);
-      // Continue anyway; webhook will still use bill id to find membership
     }
 
-    return NextResponse.json({ url: data.url, billId: data.id });
+    return NextResponse.json(
+      { url: data.url, billId: data.id, checkoutUrl: data.url },
+      { headers: corsHeaders },
+    );
   } catch (e) {
     console.error("create-bill error:", e);
     return NextResponse.json(
       { error: "Something went wrong." },
-      { status: 500 }
+      { status: 500, headers: corsHeaders },
     );
   }
 }

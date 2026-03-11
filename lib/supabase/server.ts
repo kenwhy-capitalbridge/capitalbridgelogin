@@ -19,9 +19,13 @@ export async function createClient() {
       },
       setAll(cookiesToSet) {
         try {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            const mergedOptions =
+              process.env.NODE_ENV === "production"
+                ? { ...options, domain: ".thecapitalbridge.com", secure: true }
+                : options;
+            cookieStore.set(name, value, mergedOptions);
+          });
         } catch {
           // Ignored in Server Components / when cookies are read-only
         }

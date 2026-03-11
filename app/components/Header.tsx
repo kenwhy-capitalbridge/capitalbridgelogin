@@ -25,7 +25,10 @@ export function Header() {
   const titleMobile = PAGE_TITLES_MOBILE[pathname] ?? title;
 
   return (
-    <header className="sticky top-0 z-20 border-b border-cb-cream/10 bg-[#0D3A1D]/95 backdrop-blur-sm">
+    <header
+      className="sticky top-0 z-20 border-b border-cb-cream/10 backdrop-blur-sm"
+      style={{ backgroundColor: "#0D3A1D" }}
+    >
       <div className="relative mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <Link
           href="/"
@@ -50,11 +53,11 @@ export function Header() {
             priority
           />
         </Link>
-        <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-serif text-xs font-semibold text-cb-cream sm:text-xl">
+        <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-serif text-xs font-semibold sm:text-xl" style={{ color: "#F6F5F1" }}>
           <span className="sm:hidden">{titleMobile}</span>
           <span className="hidden sm:inline">{title}</span>
         </h1>
-        <div className="flex shrink-0 items-center gap-1 text-xs text-cb-cream/90 sm:text-sm">
+        <div className="flex shrink-0 items-center gap-1 text-xs sm:text-sm" style={{ color: "rgba(246,245,241,0.9)" }}>
           <a
             href="https://thecapitalbridge.com/"
             target="_blank"
@@ -66,7 +69,7 @@ export function Header() {
             <span className="sm:hidden">Back</span>
             <span className="hidden sm:inline">Back to Platform</span>
           </a>
-          <span className="text-cb-cream/60">|</span>
+          <span style={{ color: "rgba(246,245,241,0.6)" }}>|</span>
           <Link
             href="/login"
             className="hover:text-cb-gold focus:outline-none focus:ring-2 focus:ring-cb-gold focus:ring-offset-2 focus:ring-offset-[#0D3A1D] rounded"
