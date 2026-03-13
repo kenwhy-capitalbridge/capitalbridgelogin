@@ -13,19 +13,11 @@ function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"));
 }
 
-/**
- * Refreshes the auth session and enforces access control.
- * - Protected routes: require auth + a row in active_memberships; else redirect to login or pricing.
- * - Public routes: allow through.
- */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const pathname = request.nextUrl.pathname;
-  if (!isProtectedPath(pathname)) {
-    return response;
-  }
-
+  // Always create a Supabase client so auth cookies are refreshed and
+  // written with the shared `.thecapitalbridge.com` domain when needed.
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
@@ -47,6 +39,12 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const pathname = request.nextUrl.pathname;
+  if (!isProtectedPath(pathname)) {
+    // For public routes we only refresh the session / cookies and allow through.
+    return response;
+  }
 
   if (!user) {
     const loginUrl = new URL("/login", request.url);
