@@ -28,9 +28,17 @@ function ConfirmPaymentContent() {
       }
 
       try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token ?? null;
+
         const res = await fetch(`${API_APP_URL}/billing/create`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           credentials: "include",
           body: JSON.stringify({ plan }),
         });
