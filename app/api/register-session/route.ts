@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAppServerClient } from "@cb/supabase/server";
+import { createAppServerClient } from "@/lib/supabase/server";
 
 /**
  * Registers the current user's session in public.user_sessions (one session per account).

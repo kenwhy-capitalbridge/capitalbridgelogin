@@ -6,10 +6,6 @@ const supabaseUrl =
 const supabaseAnonKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
 
-/**
- * Server Supabase client for Route Handlers and Server Actions.
- * Uses cookies for session. Call from server context only.
- */
 export async function createClient() {
   const cookieStore = await cookies();
   return createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -33,3 +29,8 @@ export async function createClient() {
     },
   });
 }
+
+export async function createAppServerClient() {
+  return createClient();
+}
+

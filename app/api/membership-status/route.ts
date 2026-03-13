@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createAppServerClient } from "@cb/supabase/server";
+import { createAppServerClient } from "@/lib/supabase/server";
 import { validateSession } from "@/lib/validateSession";
 
 /**
