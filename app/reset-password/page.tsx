@@ -2,52 +2,50 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-import { logAuthEvent } from "@/lib/authLog";
+import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 
 export default function ResetPasswordPage() {
-  const router = useRouter();
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
+  const [invalidLink, setInvalidLink] = useState(false);
 
+  // On load: exchange recovery token from URL hash so we can call updateUser()
   useEffect(() => {
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession();
+    async function run() {
+      const hash = typeof window !== "undefined" ? window.location.hash : "";
+      const params = new URLSearchParams(hash.replace(/^#/, ""));
+      const type = params.get("type");
+      const hasRecoveryToken = type === "recovery" || hash.includes("type=recovery");
+
+      // Trigger Supabase to read the hash and exchange the recovery token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (hasRecoveryToken) {
+        // After getSession(), Supabase will have exchanged the hash; we're ready to show the form
+        setReady(true);
+        if (sessionError) setInvalidLink(true);
+        return;
+      }
+
       if (session) {
         setReady(true);
         return;
       }
-      if (typeof window === "undefined") return;
-      const hashParams = new URLSearchParams(window.location.hash.slice(1));
-      const queryParams = new URLSearchParams(window.location.search);
-      const type = hashParams.get("type") || queryParams.get("type");
-      const tokenHash = queryParams.get("token_hash") || hashParams.get("token_hash");
-      if (tokenHash && type === "recovery") {
-        const { error } = await supabase.auth.verifyOtp({
-          token_hash: tokenHash,
-          type: "recovery",
-        });
-        if (!error) setReady(true);
-        else setError("Invalid or expired reset link. Please request a new one.");
-        return;
-      }
-      if (hashParams.get("type") === "recovery" && hashParams.get("access_token")) {
-        setReady(true);
-        return;
-      }
-      setError("Invalid or expired reset link. Please request a new one.");
+      setInvalidLink(true);
+      setReady(true);
     }
-    init();
+
+    run();
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (password !== confirmPassword) {
+    if (password !== confirm) {
       setError("Passwords do not match.");
       return;
     }
@@ -56,42 +54,63 @@ export default function ResetPasswordPage() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
+
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+
     setLoading(false);
-    if (error) {
-      console.error("Supabase update password error:", error);
-      setError(error.message);
+    if (updateError) {
+      setError(updateError.message);
       return;
     }
-    logAuthEvent("password_reset_success");
-    logAuthEvent("password_change");
-    await supabase.auth.signOut();
-    router.push("/login?message=reset");
-    router.refresh();
+    setSuccess(true);
   }
 
-  if (!ready && !error) {
+  if (success) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-4">
-        <div className="cb-card">
-          <h1 className="cb-card-title">Capital Bridge Advisory Platform</h1>
-          <p className="mt-6 text-center text-cb-green/80">Verifying Reset Link…</p>
+      <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "1.25rem" }}>
+        <div className="cb-card text-center">
+          <h1 className="cb-card-title">Password updated</h1>
+          <p className="cb-card-subtitle mt-2">You can now sign in with your new password.</p>
+          <p style={{ marginTop: "1rem" }}>
+            <Link className="cb-btn-primary inline-block" href="/login">
+              Back to login
+            </Link>
+          </p>
         </div>
       </main>
     );
   }
 
-  if (error && !ready) {
+  if (!ready) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-4">
-        <div className="cb-card">
-          <h1 className="cb-card-title">Capital Bridge Advisory Platform</h1>
-          <p className="cb-message-error mt-6">{error}</p>
-          <p className="mt-6 text-center text-sm text-cb-green/80">
-            <Link href="/forgot-password" className="cb-link">Request A New Reset Link</Link>
+      <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "1.25rem" }}>
+        <div className="cb-card text-center">
+          <p className="cb-card-subtitle">Loading…</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (invalidLink) {
+    return (
+      <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "1.25rem" }}>
+        <div className="cb-card text-center">
+          <h1 className="cb-card-title">Invalid or expired link</h1>
+          <p className="cb-card-subtitle mt-2">
+            Use the link from your password reset email to set a new password. Links expire after a short time.
           </p>
-          <p className="mt-2 text-center text-sm text-cb-green/80">
-            <Link href="/login" className="cb-link">Back To Login</Link>
+          <p className="cb-message-error mt-4 text-left text-sm">
+            If the link brought you to the login page instead of here, add this exact URL to Supabase: Auth → URL
+            Configuration → Redirect URLs: <strong>{typeof window !== "undefined" ? window.location.origin + "/reset-password" : "/reset-password"}</strong>
+          </p>
+          <p style={{ marginTop: "1rem" }}>
+            <Link className="cb-link" href="/forgot-password">
+              Send a new reset link
+            </Link>
+            {" · "}
+            <Link className="cb-link" href="/login">
+              Back to login
+            </Link>
           </p>
         </div>
       </main>
@@ -99,48 +118,52 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4">
+    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "1.25rem" }}>
       <div className="cb-card">
-        <h1 className="cb-card-title">Capital Bridge Advisory Platform</h1>
-        <p className="cb-card-subtitle">Set A New Password</p>
-        <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
+        <h1 className="cb-card-title">Set new password</h1>
+        <p className="cb-card-subtitle">Enter your new password below.</p>
+
+        {!isSupabaseConfigured && (
+          <p className="cb-message-error" style={{ marginTop: "1rem" }}>
+            Supabase env vars are not configured for this environment.
+          </p>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ marginTop: "1.75rem", display: "grid", gap: "1rem" }}>
           {error && <p className="cb-message-error">{error}</p>}
-          <div>
-            <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-cb-green">
-              New Password
-            </label>
+
+          <label style={{ display: "grid", gap: "0.35rem" }}>
+            <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>New password</span>
             <input
-              id="password"
-              type="password"
+              className="cb-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="new-password"
-              minLength={6}
-              className="cb-input"
-            />
-          </div>
-          <div>
-            <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-cb-green">
-              Confirm New Password
-            </label>
-            <input
-              id="confirmPassword"
               type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              autoComplete="new-password"
               minLength={6}
-              className="cb-input"
             />
-          </div>
-          <button type="submit" disabled={loading} className="cb-btn-primary mt-2">
-            {loading ? "Updating…" : "Update Password"}
+          </label>
+          <label style={{ display: "grid", gap: "0.35rem" }}>
+            <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Confirm password</span>
+            <input
+              className="cb-input"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              type="password"
+              required
+              minLength={6}
+            />
+          </label>
+
+          <button className="cb-btn-primary" type="submit" disabled={loading || !isSupabaseConfigured}>
+            {loading ? "Updating…" : "Update password"}
           </button>
         </form>
-        <p className="mt-6 text-center text-sm text-cb-green/80">
-          <Link href="/login" className="cb-link">Back To Login</Link>
+
+        <p style={{ marginTop: "1rem", fontSize: "0.9rem", opacity: 0.9 }}>
+          <Link className="cb-link" href="/login">
+            Back to login
+          </Link>
         </p>
       </div>
     </main>

@@ -1,6 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ---------------------------------------------------------------------------
    Capital Bridge Design System – Design tokens (match Tailwind theme)
@@ -59,9 +62,9 @@
     @apply w-full rounded-xl border border-cb-green/20 bg-white px-4 py-3 text-cb-green placeholder-cb-green/50;
   }
 
-  /* Primary action: gold bg, green text, rounded, medium weight, hover */
+  /* Primary action: gold bg, green text, rounded, medium weight, hover turns green */
   .cb-btn-primary {
-    @apply rounded-xl bg-cb-gold px-4 py-3 font-medium text-cb-green transition hover:opacity-90 disabled:opacity-50;
+    @apply rounded-xl bg-cb-gold px-4 py-3 font-medium text-cb-green shadow-[0_6px_16px_rgba(0,0,0,0.2),0_2px_6px_rgba(0,0,0,0.12)] transition hover:bg-cb-green hover:text-white disabled:opacity-50;
   }
 
   /* Secondary link: dark gold on light bg for legibility (CSS var avoids @apply issues) */

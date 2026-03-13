@@ -1,30 +1,24 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Header } from "./components/Header";
+import Header from "@/components/Header";
 
 export const metadata: Metadata = {
-  title: "Capital Bridge Advisory Platform",
-  description: "Capital Bridge authentication",
+  title: "Capital Bridge — Login",
+  description: "Capital Bridge login and onboarding.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" style={{ backgroundColor: "#0d3a1d", color: "#0d3a1d" }}>
-      <body
-        style={{
-          backgroundColor: "#0d3a1d",
-          color: "#0d3a1d",
-          minHeight: "100vh",
-          margin: 0,
-        }}
-      >
+    <html lang="en">
+      <body>
         <Header />
         {children}
       </body>
     </html>
   );
 }
+

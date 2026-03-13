@@ -2,56 +2,54 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { supabase, isSupabaseConfigured } from "@/lib/supabaseClient";
-import { logAuthEvent } from "@/lib/authLog";
+import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
+
+// Must match exactly a URL in Supabase Dashboard → Auth → URL Configuration → Redirect URLs (no trailing slash)
+const RESET_PASSWORD_PATH = "/reset-password";
+function getResetPasswordRedirectUrl(): string {
+  if (typeof window === "undefined")
+    return `${process.env.NEXT_PUBLIC_LOGIN_APP_URL ?? "https://login.thecapitalbridge.com"}${RESET_PASSWORD_PATH}`;
+  const origin = window.location.origin;
+  return `${origin}${RESET_PASSWORD_PATH}`;
+}
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const redirectTo =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/reset-password`
-        : "";
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+
+    const redirectTo = getResetPasswordRedirectUrl();
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
     });
+
     setLoading(false);
-    if (error) {
-      console.error("Supabase reset password error:", error);
-      const isNetworkOrConfig =
-        !isSupabaseConfigured ||
-        error.message?.toLowerCase().includes("fetch");
-      setError(
-        isNetworkOrConfig
-          ? "Cannot reach the authentication service. If you run this site, set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your deployment (e.g. Vercel) and redeploy."
-          : error.message
-      );
+    if (resetError) {
+      setError(resetError.message);
       return;
     }
-    logAuthEvent("password_reset_request", { email: email?.slice(0, 3) + "***" });
-    setSent(true);
+    setSuccess(true);
   }
 
-  if (sent) {
+  if (success) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-4">
-        <div className="cb-card">
-          <h1 className="cb-card-title">Capital Bridge Advisory Platform</h1>
-          <p className="cb-card-subtitle">Check Your Email</p>
-          <p className="cb-message-success mt-6 px-4 py-3">
-            If an account exists for that email, we&apos;ve sent a password
-            reset link. Please check your inbox and follow the link to set a new
-            password.
+      <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "1.25rem" }}>
+        <div className="cb-card text-center">
+          <h1 className="cb-card-title">Check your email</h1>
+          <p className="cb-card-subtitle mt-2">
+            We&apos;ve sent a password reset link to <strong>{email}</strong>. Click the link in that
+            email to set a new password.
           </p>
-          <p className="mt-6 text-center text-sm text-cb-green/80">
-            <Link href="/login" className="cb-link">Back To Login</Link>
+          <p style={{ marginTop: "1rem", fontSize: "0.9rem", opacity: 0.9 }}>
+            <Link className="cb-link" href="/login">
+              Back to login
+            </Link>
           </p>
         </div>
       </main>
@@ -59,32 +57,41 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4">
+    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "1.25rem" }}>
       <div className="cb-card">
-        <h1 className="cb-card-title">Capital Bridge Advisory Platform</h1>
-        <p className="cb-card-subtitle">Enter Your Email To Receive A Password Reset Link</p>
-        <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
+        <h1 className="cb-card-title">Forgot Password</h1>
+        <p className="cb-card-subtitle">Enter your email and we&apos;ll send you a reset link.</p>
+
+        {!isSupabaseConfigured && (
+          <p className="cb-message-error" style={{ marginTop: "1rem" }}>
+            Supabase env vars are not configured for this environment.
+          </p>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ marginTop: "1.75rem", display: "grid", gap: "1rem" }}>
           {error && <p className="cb-message-error">{error}</p>}
-          <div>
-            <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-cb-green">
-              Email
-            </label>
+
+          <label style={{ display: "grid", gap: "0.35rem" }}>
+            <span style={{ fontSize: "0.85rem", fontWeight: 600 }}>Email</span>
             <input
-              id="email"
-              type="email"
+              className="cb-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              type="email"
               required
-              autoComplete="email"
-              className="cb-input"
+              placeholder="you@example.com"
             />
-          </div>
-          <button type="submit" disabled={loading} className="cb-btn-primary mt-2">
-            {loading ? "Sending…" : "Send Reset Link"}
+          </label>
+
+          <button className="cb-btn-primary" type="submit" disabled={loading || !isSupabaseConfigured}>
+            {loading ? "Sending…" : "Send reset link"}
           </button>
         </form>
-        <p className="mt-6 text-center text-sm text-cb-green/80">
-          <Link href="/login" className="cb-link">Back To Login</Link>
+
+        <p style={{ marginTop: "1rem", fontSize: "0.9rem", opacity: 0.9 }}>
+          <Link className="cb-link" href="/login">
+            Back to login
+          </Link>
         </p>
       </div>
     </main>
