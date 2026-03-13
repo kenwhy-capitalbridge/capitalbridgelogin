@@ -1,3 +1,4 @@
+// Copied from production login app so local /pricing matches https://login.thecapitalbridge.com/pricing
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
@@ -54,7 +55,7 @@ const OUTCOME_PREVIEW_BOXES = [
 const FEATURE_MICROCOPY: Record<string, string> = {
   "Save report on server":
     "Your plans stay saved, so you can come back as situation changes and see how changes affect your outcome — instantly.",
-  "Save reports on server":
+  "Save Reports on Server":
     "Your plans stay saved, so you can come back as situation changes and see how changes affect your outcome — instantly.",
 };
 
@@ -104,7 +105,7 @@ const INDIVIDUAL_PLANS = [
       "Key Takeaways",
       "Generate PDF Analysis & Report",
       "The Lion’s Verdict",
-      "Save reports on server",
+      "Save Reports on Server",
     ],
     excludes: [],
     cta: "Get Monthly Access",
@@ -132,11 +133,11 @@ const ADVISOR_PLANS = [
       "Key Takeaways",
       "Generate PDF Analysis & Report",
       "The Lion’s Verdict",
-      "Save reports on server",
+      "Save Reports on Server",
     ],
     excludes: [],
     cta: "Choose Quarterly Plan",
-    plan: "advisor",
+    plan: "quarterly",
     paid: true,
     recommended: true,
     badgeLabel: "Most Popular",
@@ -149,7 +150,8 @@ const ADVISOR_PLANS = [
     durationLabel: "365-Day Strategic Advisory Access",
     description:
       "Full-year strategic advisory access for entrepreneurs, investors, and families structuring sustainable lifetime income portfolios.",
-    identityLine: "Similar services typically cost RM15,000–RM60,000+ per year and usually require at least USD1 million to get started.",
+    identityLine:
+      "Similar Family Office services typically cost RM15,000–RM60,000+ per year and usually require at least USD1 million to get started.",
     includes: [
       "Full advisory dashboard",
       "Forever Income Model",
@@ -160,15 +162,15 @@ const ADVISOR_PLANS = [
       "Key Takeaways",
       "Generate PDF Analysis & Report",
       "The Lion’s Verdict",
-      "Save reports on server",
+      "Save Reports on Server",
       "STRATEGIC ADVANTAGES",
       "Access Partner Financing & Strategic Leverage Solutions & Rates",
       "Access Curated Private & Strategic Investment Opportunities",
-      "Structured monthly income distribution & execution",
+      "Structured Monthly Income Distribution & Execution",
     ],
     excludes: [],
     cta: "Apply for Strategic Access",
-    plan: "enterprise",
+    plan: "strategic",
     paid: true,
     recommended: false,
     badgeLabel: "Flagship Access & Execution",
@@ -177,7 +179,7 @@ const ADVISOR_PLANS = [
     includesPlusIcon: [
       "Access Partner Financing & Strategic Leverage Solutions & Rates",
       "Access Curated Private & Strategic Investment Opportunities",
-      "Structured monthly income distribution & execution",
+      "Structured Monthly Income Distribution & Execution",
     ],
   },
 ];
@@ -193,7 +195,15 @@ function PlanCard({
   loadingPlan: string | null;
   isLoggedIn: boolean;
 }) {
-  const planExt = plan as { badgeLabel?: string; supportingLine?: string; identityLine?: string; unavailableInIncludes?: string[]; includesNoCheck?: string[]; includesPlusIcon?: string[]; glow?: boolean };
+  const planExt = plan as {
+    badgeLabel?: string;
+    supportingLine?: string;
+    identityLine?: string;
+    unavailableInIncludes?: string[];
+    includesNoCheck?: string[];
+    includesPlusIcon?: string[];
+    glow?: boolean;
+  };
   const showBadge = plan.recommended || !!planExt.badgeLabel;
   const badgeText = planExt.badgeLabel ?? (plan.recommended ? "Recommended" : "");
   const useGlow = planExt.glow;
@@ -217,8 +227,17 @@ function PlanCard({
         </div>
       )}
       <h3 className="font-serif text-xl font-semibold text-cb-green">{plan.name}</h3>
-      {planExt.identityLine && (
+      {planExt.identityLine && plan.id !== "yearly_full" && (
         <p className="mt-1 text-sm text-cb-green/70">{planExt.identityLine}</p>
+      )}
+      {plan.id === "yearly_full" && (
+        <p className="mt-1 text-sm text-cb-green/70">
+          Similar Family Office services typically{" "}
+          <span className="font-semibold">
+            cost RM15,000–RM60,000+ per year
+          </span>{" "}
+          and usually require at least USD1 million to get started.
+        </p>
       )}
       <div className="mt-2 flex items-baseline gap-1">
         <span className="font-serif text-3xl font-semibold text-cb-green">
@@ -245,18 +264,39 @@ function PlanCard({
             return (
               <li
                 key={f}
-                className={`flex flex-col ${microcopy ? "gap-0" : "gap-0.5"} ${noCheck ? "!mt-5" : plusIcon ? "!mt-0.5" : ""}`}
+                className={`flex flex-col ${microcopy ? "gap-0" : "gap-0.5"} ${
+                  noCheck ? "!mt-5" : plusIcon ? "!mt-0.5" : ""
+                }`}
               >
                 <div className="flex items-center gap-2">
                   {!noCheck && (
-                    <span className={
-                      plusIcon ? "text-xl font-bold text-[#c4a84a]" :
-                      unavailable ? "text-red-500" : "text-lg font-semibold text-[#c4a84a]"
-                    }>{plusIcon ? "+" : unavailable ? "✕" : "✓"}</span>
+                    <span
+                      className={
+                        plusIcon
+                          ? "text-xl font-bold text-[#c4a84a]"
+                          : unavailable
+                          ? "text-red-500"
+                          : "text-lg font-semibold text-[#c4a84a]"
+                      }
+                    >
+                      {plusIcon ? "+" : unavailable ? "✕" : "✓"}
+                    </span>
                   )}
-                  <span className={`text-sm ${unavailable ? "text-cb-green/70" : noCheck ? "font-semibold text-cb-green" : "text-cb-green"}`}>{f}</span>
+                  <span
+                    className={`text-sm ${
+                      unavailable
+                        ? "text-cb-green/70"
+                        : noCheck
+                        ? "font-semibold text-cb-green"
+                        : "text-cb-green"
+                    }`}
+                  >
+                    {f}
+                  </span>
                 </div>
-                {microcopy && <p className="mt-0 text-xs text-cb-green/70 pl-6 leading-snug">{microcopy}</p>}
+                {microcopy && (
+                  <p className="mt-0 text-xs text-cb-green/70 pl-6 leading-snug">{microcopy}</p>
+                )}
               </li>
             );
           })}
@@ -271,7 +311,9 @@ function PlanCard({
                     <span className="text-red-500">✕</span>
                     {f}
                   </div>
-                  {microcopy && <p className="mt-0 text-xs text-cb-green/70 pl-6 leading-snug">{microcopy}</p>}
+                  {microcopy && (
+                    <p className="mt-0 text-xs text-cb-green/70 pl-6 leading-snug">{microcopy}</p>
+                  )}
                 </li>
               );
             })}
@@ -284,7 +326,7 @@ function PlanCard({
             type="button"
             onClick={() => onPay(plan.plan!)}
             disabled={!!loadingPlan}
-            className="cb-btn-primary w-full shadow-[0_4px_8px_rgba(0,0,0,0.12)] disabled:opacity-60"
+            className="cb-btn-primary w-full shadow-[0_6px_16px_rgba(0,0,0,0.2),0_2px_6px_rgba(0,0,0,0.12)] disabled:opacity-60"
           >
             {loadingPlan === plan.plan ? "Redirecting…" : plan.cta}
           </button>
@@ -293,14 +335,14 @@ function PlanCard({
             type="button"
             onClick={() => onPay("trial")}
             disabled={!!loadingPlan}
-            className="cb-btn-primary w-full shadow-[0_4px_8px_rgba(0,0,0,0.12)] disabled:opacity-60"
+            className="cb-btn-primary w-full shadow-[0_6px_16px_rgba(0,0,0,0.2),0_2px_6px_rgba(0,0,0,0.12)] disabled:opacity-60"
           >
             {loadingPlan === "trial" ? "Redirecting…" : plan.cta}
           </button>
         ) : (
           <Link
             href={("ctaLink" in plan ? plan.ctaLink : null) ?? "/signup?plan=trial"}
-            className="cb-btn-primary block w-full text-center shadow-[0_4px_8px_rgba(0,0,0,0.12)]"
+            className="cb-btn-primary block w-full text-center shadow-[0_6px_16px_rgba(0,0,0,0.2),0_2px_6px_rgba(0,0,0,0.12)]"
           >
             {plan.cta}
           </Link>
@@ -328,17 +370,22 @@ function PricingContent() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [activePreviewId, setActivePreviewId] = useState<string | null>(null);
+  const [isOutcomeExpanded, setIsOutcomeExpanded] = useState(false);
   const recentlyExpired = searchParams.get("message") === "recently_expired";
 
   useEffect(() => {
+    // Supabase is the source of truth for logged-in state.
     supabase.auth.getSession().then(({ data: { session } }) => setIsLoggedIn(!!session));
   }, []);
 
   async function handlePay(planId: string) {
     if (!planId) return;
     setError(null);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
       router.replace(`/signup?plan=${encodeURIComponent(planId)}`);
       return;
     }
@@ -461,69 +508,94 @@ function PricingContent() {
           </div>
         </section>
 
-        {/* Outcome Preview Section — styled like THE LION'S VERDICT: dark green, gold accents */}
+        {/* Outcome Preview Section */}
         <section className="mt-16 sm:mt-20">
-          <div className="text-center -mx-2 sm:-mx-4 md:-mx-6 px-2 sm:px-4 md:px-6">
-            <h2 className="font-serif text-2xl font-semibold text-cb-gold sm:text-3xl">
-              Capital Bridge Outcome Preview
-            </h2>
-            <p className="mx-auto mt-2 max-w-3xl text-cb-cream/80">
-              See how Capital Bridge analyzes income and investment strategies through
-              models carefully designed to be simple and easy to understand — not just
-              for financial planners, but for anyone making long-term decisions.
-            </p>
+          <div className="-mx-2 sm:-mx-4 md:-mx-6 px-2 sm:px-4 md:px-6 flex flex-col items-center gap-3">
+            <div className="text-center">
+              <h2 className="font-serif text-2xl font-semibold text-cb-gold sm:text-3xl">
+                Capital Bridge Outcome Preview
+              </h2>
+              <p className="mx-auto mt-2 max-w-3xl text-cb-cream/80">
+                See how Capital Bridge analyzes income and investment strategies through
+                models carefully designed to be simple and easy to understand — not just
+                for financial planners, but for anyone making long-term decisions.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsOutcomeExpanded((prev) => !prev)}
+              className="inline-flex items-center gap-2 rounded-full border border-cb-gold/70 bg-black/10 px-4 py-1.5 text-sm font-medium text-cb-gold hover:bg-cb-gold/20 hover:text-cb-cream"
+            >
+              <span className="text-base leading-none">
+                {isOutcomeExpanded ? "−" : "+"}
+              </span>
+              <span>{isOutcomeExpanded ? "Collapse Preview" : "Expand Preview"}</span>
+            </button>
           </div>
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {OUTCOME_PREVIEW_BOXES.map((box) => (
-              <div
-                key={box.id}
-                className="overflow-hidden rounded-xl border border-cb-gold/30 bg-[#1a2e1f] shadow-lg"
-              >
-                <div className="relative aspect-[4/3] w-full bg-[#0D3A1D]">
-                  <Image
-                    src={box.image}
-                    alt=""
-                    fill
-                    className="object-cover object-top"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  />
-                </div>
-                <div className="border-t border-cb-gold/20 p-4">
-                  <h3 className="font-serif text-base font-semibold text-cb-gold">
-                    {box.title}
-                  </h3>
-                  <p className="mt-1.5 text-sm text-cb-cream/80 leading-snug">
-                    {box.description}
-                  </p>
+          {isOutcomeExpanded && (
+            <>
+              <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {OUTCOME_PREVIEW_BOXES.map((box) => (
+                  <div
+                    key={box.id}
+                    className="group overflow-hidden rounded-xl border border-cb-gold/30 bg-[#1a2e1f] shadow-lg cursor-pointer"
+                    onClick={() => setActivePreviewId(box.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setActivePreviewId(box.id);
+                      }
+                    }}
+                  >
+                    <div className="relative aspect-[4/3] w-full bg-[#0D3A1D]">
+                      <Image
+                        src={box.image}
+                        alt={box.title}
+                        fill
+                        className="object-cover object-top transition-transform duration-200 group-hover:scale-105"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      />
+                    </div>
+                    <div className="border-t border-cb-gold/20 p-4">
+                      <h3 className="font-serif text-base font-semibold text-cb-gold">
+                        {box.title}
+                      </h3>
+                      <p className="mt-1.5 text-sm text-cb-cream/80 leading-snug">
+                        {box.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-sm italic text-cb-cream/60">
+                *Full advisory interpretation is available with platform access.
+              </p>
+              <div className="mt-8 rounded-xl border border-cb-gold/30 bg-cb-cream/5 p-5 text-center">
+                <h3 className="font-serif text-lg font-semibold text-cb-cream">
+                  Try the Capital Bridge Framework
+                </h3>
+                <p className="mt-2 text-sm text-cb-cream/80">
+                  Understand how your capital structure performs under different withdrawal
+                  strategies and market conditions.
+                </p>
+                <p className="mt-2 text-sm text-cb-cream/70">
+                  Many users uncover important risks in their first analysis — insights that
+                  often go unnoticed until stress testing reveals them.
+                </p>
+                <div className="mt-4 flex flex-col items-center justify-center gap-1">
+                  <Link
+                    href="/signup?plan=trial"
+                    className="cb-btn-primary inline-block w-full text-center sm:w-auto"
+                  >
+                    Start My Trial Analysis
+                  </Link>
+                  <span className="text-sm text-cb-cream/70">7-day Access • RM1 Verification</span>
                 </div>
               </div>
-            ))}
-          </div>
-          <p className="mt-4 text-sm italic text-cb-cream/60">
-            *Full advisory interpretation is available with platform access.
-          </p>
-          <div className="mt-8 rounded-xl border border-cb-gold/30 bg-cb-cream/5 p-5 text-center">
-            <h3 className="font-serif text-lg font-semibold text-cb-cream">
-              Try the Capital Bridge Framework
-            </h3>
-            <p className="mt-2 text-sm text-cb-cream/80">
-              Understand how your capital structure performs under different withdrawal
-              strategies and market conditions.
-            </p>
-            <p className="mt-2 text-sm text-cb-cream/70">
-              Many users uncover important risks in their first analysis — insights that
-              often go unnoticed until stress testing reveals them.
-            </p>
-            <div className="mt-4 flex flex-col items-center justify-center gap-1">
-              <Link
-                href="/signup?plan=trial"
-                className="cb-btn-primary inline-block w-full text-center sm:w-auto"
-              >
-                Start My Trial Analysis
-              </Link>
-              <span className="text-sm text-cb-cream/70">7-day Access • RM1 Verification</span>
-            </div>
-          </div>
+            </>
+          )}
         </section>
 
         {/* Trust Layer Section */}
@@ -663,11 +735,52 @@ function PricingContent() {
             Back To Login
           </Link>
           {" · "}
-          <Link href="/" className="text-cb-gold hover:underline">
+          <a
+            href="https://thecapitalbridge.com/advisory-platform/"
+            className="text-cb-gold hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Home
-          </Link>
+          </a>
         </p>
       </div>
+      {activePreviewId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+          onClick={() => setActivePreviewId(null)}
+        >
+          <div
+            className="relative max-h-[80vh] w-full max-w-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="absolute -top-10 right-0 rounded-full bg-white/10 px-3 py-1 text-sm text-cb-cream hover:bg-white/20"
+              onClick={() => setActivePreviewId(null)}
+            >
+              Close
+            </button>
+            {(() => {
+              const box = OUTCOME_PREVIEW_BOXES.find((b) => b.id === activePreviewId);
+              if (!box) return null;
+              return (
+                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-cb-gold/40 bg-[#0D3A1D] shadow-2xl">
+                  <Image
+                    src={box.image}
+                    alt={box.title}
+                    fill
+                    className="object-contain"
+                    sizes="100vw"
+                    quality={100}
+                    priority
+                  />
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -685,3 +798,4 @@ export default function PricingPage() {
     </Suspense>
   );
 }
+
